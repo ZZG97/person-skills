@@ -1,0 +1,4 @@
+/skill-kit.local.json
+node_modules/
+coverage/
+*.log

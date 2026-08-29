@@ -1,0 +1,4 @@
+interface:
+  display_name: "Agent Chrome"
+  short_description: "Manage isolated persistent Chromium profiles"
+  default_prompt: "Use $use-agent-chrome to select an isolated browser profile and attach it safely with Playwright CLI."

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "browsers": {
+    "default": {
+      "label": "Default agent browser",
+      "purpose": "General browsing with persistent login state",
+      "backendHost": "127.0.0.1",
+      "backendPort": 19222,
+      "profile": "/absolute/path/to/agent-chrome/profiles/default",
+      "executable": "/absolute/path/to/chromium",
+      "service": {
+        "manager": "systemd-user",
+        "name": "agent-chrome-default.service"
+      },
+      "account": {
+        "site": "example.com",
+        "role": "personal"
+      }
+    }
+  }
+}
