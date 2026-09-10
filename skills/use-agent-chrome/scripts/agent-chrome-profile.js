@@ -72,7 +72,7 @@ Add/clone options:
   --user-data-dir <path>      New, dedicated profile directory
   --executable <path>         Chromium executable
   --start                     Start the new profile after registering it
-  --dry-run                   Print the planned registry entry and unit only
+  --dry-run                   Print the planned registry entry and service only
 
 Clone option:
   --from <name>               Registered source profile; login state is copied
@@ -256,6 +256,8 @@ function executableCandidates(template) {
   return [
     args.executable,
     template && template.executable,
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
     "/usr/bin/chromium",
     "/usr/bin/chromium-browser",
     "/usr/bin/google-chrome-stable",
@@ -304,14 +306,14 @@ function systemdQuote(value) {
   return `"${String(value).replace(/%/g, "%%").replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
-function makeUnit(name, profile, executable) {
+function browserArguments(profile, executable, headless) {
   const launchArgs = [
     executable,
-    "--headless=new",
     "--remote-debugging-address=127.0.0.1",
     `--remote-debugging-port=${profile.backendPort}`,
     `--user-data-dir=${profile.profile}`,
   ];
+  if (headless) launchArgs.push("--headless=new");
   launchArgs.push(
     "--no-first-run",
     "--no-default-browser-check",
@@ -319,6 +321,11 @@ function makeUnit(name, profile, executable) {
     "--window-size=1440,900",
     "about:blank"
   );
+  return launchArgs;
+}
+
+function makeUnit(name, profile, executable) {
+  const launchArgs = browserArguments(profile, executable, true);
   return `[Unit]
 Description=Agent Chrome profile ${name}
 After=network.target
@@ -333,6 +340,107 @@ KillSignal=SIGTERM
 [Install]
 WantedBy=default.target
 `;
+}
+
+function xmlEscape(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function makeLaunchAgent(name, profile, executable, stdoutPath, stderrPath) {
+  const serviceName = `com.agent-chrome.${name}`;
+  const argumentsXml = browserArguments(profile, executable, false)
+    .map((value) => `      <string>${xmlEscape(value)}</string>`)
+    .join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${xmlEscape(serviceName)}</string>
+  <key>ProgramArguments</key>
+  <array>
+${argumentsXml}
+  </array>
+  <key>RunAtLoad</key>
+  <false/>
+  <key>KeepAlive</key>
+  <false/>
+  <key>ProcessType</key>
+  <string>Interactive</string>
+  <key>StandardOutPath</key>
+  <string>${xmlEscape(stdoutPath)}</string>
+  <key>StandardErrorPath</key>
+  <string>${xmlEscape(stderrPath)}</string>
+</dict>
+</plist>
+`;
+}
+
+function profileDataRoot() {
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "agent-chrome", "profiles");
+  }
+  const dataRoot = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
+  return path.join(dataRoot, "agent-chrome", "profiles");
+}
+
+function makeServicePlan(name, profile, executable) {
+  if (process.platform === "linux") {
+    const serviceName = `agent-chrome-${name}.service`;
+    return {
+      manager: "systemd-user",
+      name: serviceName,
+      path: path.join(os.homedir(), ".config", "systemd", "user", serviceName),
+      definition: makeUnit(name, profile, executable),
+    };
+  }
+  if (process.platform === "darwin") {
+    const serviceName = `com.agent-chrome.${name}`;
+    const logRoot = path.join(os.homedir(), "Library", "Logs", "agent-chrome");
+    return {
+      manager: "launchd",
+      name: serviceName,
+      path: path.join(os.homedir(), "Library", "LaunchAgents", `${serviceName}.plist`),
+      definition: makeLaunchAgent(
+        name,
+        profile,
+        executable,
+        path.join(logRoot, `${name}.out.log`),
+        path.join(logRoot, `${name}.err.log`)
+      ),
+      logRoot,
+    };
+  }
+  fail(`automatic profile creation is not supported on ${process.platform}`);
+}
+
+function installService(plan) {
+  fs.mkdirSync(path.dirname(plan.path), { recursive: true, mode: 0o700 });
+  if (plan.logRoot) fs.mkdirSync(plan.logRoot, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(plan.path, plan.definition, { mode: 0o644, flag: "wx" });
+  if (plan.manager === "systemd-user") {
+    run("systemctl", ["--user", "daemon-reload"]);
+    return;
+  }
+  run("launchctl", ["bootstrap", `gui/${process.getuid()}`, plan.path], { capture: true });
+}
+
+function uninstallService(plan) {
+  if (plan.manager === "launchd") {
+    spawnSync("launchctl", ["bootout", `gui/${process.getuid()}/${plan.name}`], {
+      encoding: "utf8",
+      stdio: "pipe",
+    });
+  }
+  fs.rmSync(plan.path, { force: true });
+  if (plan.manager === "systemd-user") {
+    run("systemctl", ["--user", "daemon-reload"]);
+  }
 }
 
 function ensureNewProfileDirectory(profileDirectory) {
@@ -353,26 +461,22 @@ function atomicWriteJson(filename, value) {
 }
 
 async function addProfile(registry) {
-  if (process.platform !== "linux") {
-    fail("automatic profile creation currently supports Linux systemd-user; see references/platform-setup.md for macOS");
-  }
   const name = profileName();
   if (registry.browsers[name]) fail(`profile already exists: ${name}`);
 
   const template = registry.browsers.default || Object.values(registry.browsers)[0];
   const browserExecutable = chooseExecutable(template);
   const backendPort = await choosePort(registry);
-  const dataRoot = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
   const profileDirectory = path.resolve(
-    String(args["user-data-dir"] || path.join(dataRoot, "agent-chrome", "profiles", name))
+    String(args["user-data-dir"] || path.join(profileDataRoot(), name))
   );
   ensureNewProfileDirectory(profileDirectory);
+  const profileDirectoryExisted = fs.existsSync(profileDirectory);
 
   const account = {};
   for (const key of ["site", "role", "environment"]) {
     if (args[key]) account[key] = String(args[key]);
   }
-  const serviceName = `agent-chrome-${name}.service`;
   const newProfile = {
     label: String(args.label || name),
     ...(args.purpose ? { purpose: String(args.purpose) } : {}),
@@ -380,24 +484,35 @@ async function addProfile(registry) {
     backendPort,
     profile: profileDirectory,
     executable: browserExecutable,
-    service: { manager: "systemd-user", name: serviceName },
     ...(Object.keys(account).length ? { account } : {}),
   };
-  const unit = makeUnit(name, newProfile, browserExecutable);
-  const unitPath = path.join(os.homedir(), ".config", "systemd", "user", serviceName);
-  if (fs.existsSync(unitPath)) fail(`service unit already exists: ${unitPath}`);
+  const servicePlan = makeServicePlan(name, newProfile, browserExecutable);
+  newProfile.service = { manager: servicePlan.manager, name: servicePlan.name };
+  if (fs.existsSync(servicePlan.path)) fail(`service definition already exists: ${servicePlan.path}`);
 
   if (args["dry-run"]) {
-    process.stdout.write(`${JSON.stringify({ registryEntry: newProfile, unitPath, unit }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({
+      registryEntry: newProfile,
+      servicePath: servicePlan.path,
+      serviceDefinition: servicePlan.definition,
+    }, null, 2)}\n`);
     return;
   }
 
-  fs.mkdirSync(profileDirectory, { recursive: true, mode: 0o700 });
-  fs.mkdirSync(path.dirname(unitPath), { recursive: true, mode: 0o700 });
-  fs.writeFileSync(unitPath, unit, { mode: 0o644, flag: "wx" });
-  registry.browsers[name] = newProfile;
-  atomicWriteJson(configPath, registry);
-  run("systemctl", ["--user", "daemon-reload"]);
+  const originalRegistry = JSON.parse(JSON.stringify(registry));
+  let serviceCreated = false;
+  try {
+    fs.mkdirSync(profileDirectory, { recursive: true, mode: 0o700 });
+    installService(servicePlan);
+    serviceCreated = true;
+    registry.browsers[name] = newProfile;
+    atomicWriteJson(configPath, registry);
+  } catch (error) {
+    if (serviceCreated || fs.existsSync(servicePlan.path)) uninstallService(servicePlan);
+    if (!profileDirectoryExisted) fs.rmSync(profileDirectory, { recursive: true, force: true });
+    atomicWriteJson(configPath, originalRegistry);
+    throw error;
+  }
   process.stdout.write(`Added profile ${name}\nCDP: ${endpoint(newProfile)}\nProfile: ${profileDirectory}\n`);
   if (args.start) {
     await ensureStarted(newProfile);
@@ -421,9 +536,6 @@ function shouldCopyProfileEntry(sourceRoot, sourcePath) {
 }
 
 async function cloneProfile(registry) {
-  if (process.platform !== "linux") {
-    fail("automatic profile cloning currently supports Linux systemd-user; see references/platform-setup.md for macOS");
-  }
   const name = profileName();
   if (registry.browsers[name]) fail(`profile already exists: ${name}`);
   const sourceName = String(args.from || "");
@@ -439,9 +551,8 @@ async function cloneProfile(registry) {
 
   const browserExecutable = chooseExecutable(source);
   const backendPort = await choosePort(registry);
-  const dataRoot = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local", "share");
   const profileDirectory = path.resolve(
-    String(args["user-data-dir"] || path.join(dataRoot, "agent-chrome", "profiles", name))
+    String(args["user-data-dir"] || path.join(profileDataRoot(), name))
   );
   if (fs.existsSync(profileDirectory)) {
     fail(`clone destination must not already exist: ${profileDirectory}`);
@@ -454,7 +565,6 @@ async function cloneProfile(registry) {
   for (const key of ["site", "role", "environment"]) {
     if (args[key]) account[key] = String(args[key]);
   }
-  const serviceName = `agent-chrome-${name}.service`;
   const newProfile = {
     label: String(args.label || `${source.label || sourceName} copy`),
     purpose: String(args.purpose || `Copy of ${sourceName}`),
@@ -462,23 +572,27 @@ async function cloneProfile(registry) {
     backendPort,
     profile: profileDirectory,
     executable: browserExecutable,
-    service: { manager: "systemd-user", name: serviceName },
     ...(Object.keys(account).length ? { account } : {}),
     clonedFrom: sourceName,
   };
-  const unit = makeUnit(name, newProfile, browserExecutable);
-  const unitPath = path.join(os.homedir(), ".config", "systemd", "user", serviceName);
-  if (fs.existsSync(unitPath)) fail(`service unit already exists: ${unitPath}`);
+  const servicePlan = makeServicePlan(name, newProfile, browserExecutable);
+  newProfile.service = { manager: servicePlan.manager, name: servicePlan.name };
+  if (fs.existsSync(servicePlan.path)) fail(`service definition already exists: ${servicePlan.path}`);
 
   if (args["dry-run"]) {
-    process.stdout.write(`${JSON.stringify({ source: sourceName, registryEntry: newProfile, unitPath, unit }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({
+      source: sourceName,
+      registryEntry: newProfile,
+      servicePath: servicePlan.path,
+      serviceDefinition: servicePlan.definition,
+    }, null, 2)}\n`);
     return;
   }
 
   const originalRegistry = JSON.parse(JSON.stringify(registry));
   const sourceWasOnline = await health(source);
   let destinationCreated = false;
-  let unitCreated = false;
+  let serviceCreated = false;
   let registryChanged = false;
   let operationError = null;
 
@@ -496,20 +610,17 @@ async function cloneProfile(registry) {
       force: false,
       filter: (sourcePath) => shouldCopyProfileEntry(sourceDirectory, sourcePath),
     });
-    fs.mkdirSync(path.dirname(unitPath), { recursive: true, mode: 0o700 });
-    fs.writeFileSync(unitPath, unit, { mode: 0o644, flag: "wx" });
-    unitCreated = true;
+    installService(servicePlan);
+    serviceCreated = true;
     registry.browsers[name] = newProfile;
     atomicWriteJson(configPath, registry);
     registryChanged = true;
-    run("systemctl", ["--user", "daemon-reload"]);
   } catch (error) {
     operationError = error;
     try {
       if (registryChanged) atomicWriteJson(configPath, originalRegistry);
-      if (unitCreated) fs.rmSync(unitPath, { force: true });
+      if (serviceCreated || fs.existsSync(servicePlan.path)) uninstallService(servicePlan);
       if (destinationCreated) fs.rmSync(profileDirectory, { recursive: true, force: true });
-      run("systemctl", ["--user", "daemon-reload"]);
     } catch (rollbackError) {
       operationError = new Error(`${error.message}; rollback also failed: ${rollbackError.message}`);
     }

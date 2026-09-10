@@ -149,7 +149,15 @@ test("add dry-run creates a portable plan without writing profile state", async 
   assert.equal(plan.registryEntry.backendHost, "127.0.0.1");
   assert.equal(plan.registryEntry.backendPort, port);
   assert.equal(plan.registryEntry.profile, profile);
-  assert.doesNotMatch(plan.unit, /load-extension/);
+  assert.doesNotMatch(plan.serviceDefinition, /load-extension/);
+  if (process.platform === "darwin") {
+    assert.equal(plan.registryEntry.service.manager, "launchd");
+    assert.match(plan.servicePath, /Library\/LaunchAgents\/com\.agent-chrome\.personal\.plist$/);
+    assert.match(plan.serviceDefinition, /<key>ProgramArguments<\/key>/);
+  } else {
+    assert.equal(plan.registryEntry.service.manager, "systemd-user");
+    assert.match(plan.servicePath, /agent-chrome-personal\.service$/);
+  }
   assert.equal(fs.existsSync(profile), false);
   assert.deepEqual(JSON.parse(fs.readFileSync(config, "utf8")).browsers, {});
 });

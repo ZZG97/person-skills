@@ -16,7 +16,7 @@ Highlights:
 - durable login state with one isolated profile per account;
 - direct Playwright CLI attachment through loopback CDP;
 - safe profile discovery, startup, creation, and cloning;
-- Linux systemd-user automation and documented macOS setup;
+- Linux systemd-user and macOS LaunchAgent automation;
 - no cookies, credentials, browser profiles, or machine paths in Git.
 
 ## Requirements
@@ -24,8 +24,7 @@ Highlights:
 - Node.js 18 or newer
 - Chrome or Chromium with CDP support
 - playwright-cli available on PATH
-- Linux for automatic profile creation and cloning; macOS can use a manually
-  registered LaunchAgent
+- Linux or macOS for automatic profile creation and cloning
 
 ## Install
 
@@ -41,9 +40,10 @@ For a repository managed with skill-kit, validate it with:
 python3 /path/to/skill_repo.py validate .
 ~~~
 
-Then follow
-[the platform setup guide](skills/use-agent-chrome/references/platform-setup.md)
-to create the local registry. The example at
+Then follow the
+[new-machine initialization guide](skills/use-agent-chrome/references/initialization.md).
+The [platform setup guide](skills/use-agent-chrome/references/platform-setup.md)
+contains schema and manual recovery details. The example at
 [examples/registry.example.json](examples/registry.example.json) contains only
 placeholders and is safe to copy.
 

@@ -15,8 +15,9 @@ registry, never in the portable Skill repository.
 
 ## Requirements
 
-Require Node.js 18 or newer and playwright-cli on PATH. If playwright-cli is
-absent, report that fact and ask before installing it.
+Require Node.js 18 or newer and the official `@playwright/cli` package on PATH
+as `playwright-cli`. If it is absent, report that fact and ask before installing
+it.
 
 Discover the registry in this order:
 
@@ -25,9 +26,10 @@ Discover the registry in this order:
    ~/.config/agent-chrome/registry.json
 3. macOS: ~/Library/Application Support/agent-chrome/registry.json
 
-If the registry or browser service is missing, read
-[platform-setup.md](references/platform-setup.md) completely before changing
-the machine.
+On a new machine, or when the registry or browser service is missing, read
+[initialization.md](references/initialization.md) completely before changing
+the machine. Read [platform-setup.md](references/platform-setup.md) as well when
+manual registration, schema details, or recovery is needed.
 
 ## Default workflow
 
@@ -89,7 +91,7 @@ node "$skill_root/scripts/agent-chrome-profile.js" describe \
   --purpose "General browsing with persistent login state"
 ~~~
 
-On Linux, create an empty profile with a generated systemd-user service. Review
+On Linux or macOS, create an empty profile with a generated user service. Review
 the plan before applying it:
 
 ~~~bash

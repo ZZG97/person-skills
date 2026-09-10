@@ -1,7 +1,8 @@
 # Platform setup
 
-Read this file when installing Agent Chrome on a new machine or registering a
-browser account outside the Linux helper.
+Read this file for registry schema, service details, manual registration, or
+recovery. For the complete installation sequence, start with
+[initialization.md](initialization.md).
 
 ## Portable and local boundaries
 
@@ -103,10 +104,9 @@ when an empty account is intended.
 
 ## macOS service integration
 
-Automatic add and clone operations currently require Linux and systemd-user.
-On macOS, create one per-user LaunchAgent under ~/Library/LaunchAgents for each
-profile. Give every browser a unique --user-data-dir and loopback CDP port, then
-record the LaunchAgent like this:
+The bundled helper supports `add` and `clone` on macOS. It creates one per-user
+LaunchAgent under `~/Library/LaunchAgents` for each profile, stores logs under
+`~/Library/Logs/agent-chrome`, and records the service like this:
 
 ~~~json
 {
@@ -115,8 +115,9 @@ record the LaunchAgent like this:
 }
 ~~~
 
-Load a new property list with launchctl bootstrap, then use launchctl kickstart
-for later starts. Common browser executables include:
+Review `--dry-run` before applying. The helper bootstraps a new property list
+with launchctl and uses launchctl kickstart for later starts. It does not start
+the browser at login. Common browser executables include:
 
 - /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 - /Applications/Chromium.app/Contents/MacOS/Chromium
