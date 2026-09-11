@@ -1,6 +1,55 @@
 {
   "schema_version": 1,
   "name": "person-skills",
-  "skills": ["use-agent-chrome"],
-  "variables": {}
+  "skills": ["use-agent-chrome", "rss-ops"],
+  "variables": {
+    "FRESHRSS_BASE_URL": {
+      "type": "string",
+      "description": "Loopback FreshRSS base URL used by rss-ops",
+      "required": true,
+      "pattern": "^https?://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?(/.*)?$"
+    },
+    "FRESHRSS_DATA_DIR": {
+      "type": "path",
+      "description": "FreshRSS host data directory containing config.php and users/",
+      "required": true,
+      "must_exist": true
+    },
+    "FRESHRSS_USER": {
+      "type": "string",
+      "description": "FreshRSS local username managed by rss-ops",
+      "required": true,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "RSSHUB_BASE_URL": {
+      "type": "string",
+      "description": "Loopback RSSHub base URL",
+      "required": true,
+      "pattern": "^https?://(127\\.0\\.0\\.1|localhost)(:[0-9]+)?(/.*)?$"
+    },
+    "RSSHUB_DEPLOY_DIR": {
+      "type": "path",
+      "description": "Local RSSHub deployment directory",
+      "required": true,
+      "must_exist": true
+    },
+    "RSS_AI_DB_PATH": {
+      "type": "path",
+      "description": "Sage Agent Host RSS AI SQLite database",
+      "required": true,
+      "must_exist": true
+    },
+    "ZHIHU_FOLLOWEES_FILE": {
+      "type": "path",
+      "description": "Machine-local Zhihu followee inventory JSON",
+      "required": true,
+      "must_exist": true
+    },
+    "RSS_OPS_STATE_DIR": {
+      "type": "path",
+      "description": "Machine-local mutable state directory for rss-ops",
+      "required": true,
+      "must_exist": true
+    }
+  }
 }

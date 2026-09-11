@@ -1,0 +1,4 @@
+interface:
+  display_name: "RSS Ops"
+  short_description: "Manage and diagnose a local RSS stack"
+  default_prompt: "Use $rss-ops to safely inspect or operate FreshRSS, RSSHub, and local RSS metadata."
