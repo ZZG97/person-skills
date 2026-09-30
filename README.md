@@ -31,10 +31,18 @@ Highlights:
 
 ## Install
 
-Copy the Skill directory into your agent's Skill location:
+Copy the Skill directory into the shared user-level Skill location:
 
 ~~~bash
-cp -R skills/use-agent-chrome ~/.codex/skills/use-agent-chrome
+mkdir -p ~/.agents/skills
+cp -R skills/use-agent-chrome ~/.agents/skills/use-agent-chrome
+~~~
+
+Agents that read another directory can link to it; for example Claude Code
+reads `~/.claude/skills`:
+
+~~~bash
+ln -s ../.agents/skills ~/.claude/skills   # only if ~/.claude/skills does not exist yet
 ~~~
 
 For a repository managed with skill-kit, validate it with:
