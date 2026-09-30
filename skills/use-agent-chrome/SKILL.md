@@ -1,6 +1,6 @@
 ---
 name: use-agent-chrome
-description: Select, describe, create, clone, start, and safely attach Playwright CLI to persistent agent-only Chromium profiles. Use for browser automation that needs durable login state, multiple isolated accounts, QR or verification-code login, a registered local browser service, or direct loopback CDP access without touching a person's daily browser.
+description: Select, describe, create, clone, start, and safely attach Playwright CLI to persistent agent-only Chromium profiles. Use for browser automation that needs durable login state, multiple isolated accounts, QR or verification-code login, a registered local browser service, one registered browser extension, or direct loopback CDP access without touching a person's daily browser.
 ---
 
 # Use Agent Chrome
@@ -25,7 +25,8 @@ Discover the registry in this order:
    ~/.config/agent-chrome/registry.json
 3. macOS: ~/Library/Application Support/agent-chrome/registry.json
 
-If the registry or browser service is missing, read
+If the registry is missing on a new machine, `agent-chrome-profile.js init`
+creates an empty one. If the registry or browser service is missing, read
 [platform-setup.md](references/platform-setup.md) completely before changing
 the machine.
 
@@ -118,6 +119,31 @@ node "$skill_root/scripts/agent-chrome-profile.js" clone \
 After creating a profile, attach to it and open the product login page. Ask the
 user to complete QR, passkey, verification-code, or other human authentication
 when required. Verify the resulting account identity before using it.
+
+## Registered extension
+
+The registry may name one unpacked Chromium extension in its top-level
+`extension` object (directory, id, popup page). It is not installed from a
+store: someone places the unpacked extension on disk first and registers it.
+
+- `add` and `clone` write `--load-extension=<directory>` and
+  `--disable-extensions-except=<directory>` into the new profile's service, so
+  that profile loads this extension and no other. Pass `--without-extension` to
+  create a profile without it; a clone keeps its source's choice. Existing
+  profiles are not changed.
+- To operate the extension, open its popup page and use normal Playwright
+  locators:
+
+  ```bash
+  popup_url="$(node "$skill_root/scripts/agent-chrome-profile.js" extension-url)"
+  playwright-cli -s="$session" tab-new "$popup_url"
+  playwright-cli -s="$session" snapshot
+  ```
+
+- An extension can read pages and change requests in a profile that holds login
+  state. Register only an extension the user chose, change its settings only for
+  an explicit task target, and restore them after the task unless asked to keep
+  them.
 
 ## Concurrency
 

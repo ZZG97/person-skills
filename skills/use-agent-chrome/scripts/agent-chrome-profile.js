@@ -53,6 +53,7 @@ function fail(message, code = 1) {
 
 function printHelp() {
   process.stdout.write(`Usage:
+  agent-chrome-profile.js init [--config <path>]
   agent-chrome-profile.js list [--json]
   agent-chrome-profile.js status --profile <name> [--json]
   agent-chrome-profile.js endpoint --profile <name>
@@ -61,6 +62,7 @@ function printHelp() {
   agent-chrome-profile.js add --profile <name> [options]
   agent-chrome-profile.js clone --from <name> --profile <new-name> [options]
   agent-chrome-profile.js describe --profile <name> [options]
+  agent-chrome-profile.js extension-url
 
 Add/clone options:
   --label <label>             Human-readable account label
@@ -72,10 +74,11 @@ Add/clone options:
   --user-data-dir <path>      New, dedicated profile directory
   --executable <path>         Chromium executable
   --start                     Start the new profile after registering it
+  --without-extension         Do not load the registered extension into this profile
   --dry-run                   Print the planned registry entry and unit only
 
 Clone option:
-  --from <name>               Registered source profile; login state is copied
+  --from <name>               Registered source profile; login and extension state are copied
 
 Describe options:
   --label <label>             Replace the human-readable label
@@ -247,6 +250,7 @@ function compactProfile(name, profile, online) {
     profile: profile.profile,
     account: profile.account || null,
     clonedFrom: profile.clonedFrom || null,
+    extension: Boolean(profile.extension),
     service: profile.service || null,
     online,
   };
@@ -304,7 +308,24 @@ function systemdQuote(value) {
   return `"${String(value).replace(/%/g, "%%").replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
-function makeUnit(name, profile, executable) {
+function initializeRegistry() {
+  if (fs.existsSync(configPath)) fail(`refusing to overwrite existing profile registry: ${configPath}`);
+  atomicWriteJson(configPath, { version: 1, browsers: {} });
+  process.stdout.write(`Initialized Agent Chrome registry: ${configPath}\n`);
+}
+
+// One optional unpacked extension may be registered at the top level of the registry. Profiles
+// created with it load that extension only; every other extension is disabled for them.
+function registeredExtension(registry, enabledForProfile = true) {
+  if (args["without-extension"] || !enabledForProfile || !registry.extension?.directory) return null;
+  const directory = path.resolve(String(registry.extension.directory));
+  if (!fs.existsSync(path.join(directory, "manifest.json"))) {
+    fail(`registered extension is missing or has no manifest.json: ${directory}`);
+  }
+  return directory;
+}
+
+function makeUnit(name, profile, executable, extensionDirectory) {
   const launchArgs = [
     executable,
     "--headless=new",
@@ -312,6 +333,10 @@ function makeUnit(name, profile, executable) {
     `--remote-debugging-port=${profile.backendPort}`,
     `--user-data-dir=${profile.profile}`,
   ];
+  if (extensionDirectory) {
+    launchArgs.push(`--disable-extensions-except=${extensionDirectory}`);
+    launchArgs.push(`--load-extension=${extensionDirectory}`);
+  }
   launchArgs.push(
     "--no-first-run",
     "--no-default-browser-check",
@@ -372,6 +397,7 @@ async function addProfile(registry) {
   for (const key of ["site", "role", "environment"]) {
     if (args[key]) account[key] = String(args[key]);
   }
+  const extensionDirectory = registeredExtension(registry);
   const serviceName = `agent-chrome-${name}.service`;
   const newProfile = {
     label: String(args.label || name),
@@ -382,8 +408,9 @@ async function addProfile(registry) {
     executable: browserExecutable,
     service: { manager: "systemd-user", name: serviceName },
     ...(Object.keys(account).length ? { account } : {}),
+    extension: Boolean(extensionDirectory),
   };
-  const unit = makeUnit(name, newProfile, browserExecutable);
+  const unit = makeUnit(name, newProfile, browserExecutable, extensionDirectory);
   const unitPath = path.join(os.homedir(), ".config", "systemd", "user", serviceName);
   if (fs.existsSync(unitPath)) fail(`service unit already exists: ${unitPath}`);
 
@@ -454,6 +481,7 @@ async function cloneProfile(registry) {
   for (const key of ["site", "role", "environment"]) {
     if (args[key]) account[key] = String(args[key]);
   }
+  const extensionDirectory = registeredExtension(registry, source.extension !== false);
   const serviceName = `agent-chrome-${name}.service`;
   const newProfile = {
     label: String(args.label || `${source.label || sourceName} copy`),
@@ -465,8 +493,9 @@ async function cloneProfile(registry) {
     service: { manager: "systemd-user", name: serviceName },
     ...(Object.keys(account).length ? { account } : {}),
     clonedFrom: sourceName,
+    extension: Boolean(extensionDirectory),
   };
-  const unit = makeUnit(name, newProfile, browserExecutable);
+  const unit = makeUnit(name, newProfile, browserExecutable, extensionDirectory);
   const unitPath = path.join(os.homedir(), ".config", "systemd", "user", serviceName);
   if (fs.existsSync(unitPath)) fail(`service unit already exists: ${unitPath}`);
 
@@ -568,7 +597,19 @@ async function main() {
     printHelp();
     return;
   }
+  if (command === "init") {
+    if (args._.length !== 1) fail("init takes no positional arguments");
+    initializeRegistry();
+    return;
+  }
   const registry = loadRegistry();
+
+  if (command === "extension-url") {
+    const popup = registry.extension?.popup;
+    if (!popup) fail("no extension popup is registered");
+    process.stdout.write(`${popup}\n`);
+    return;
+  }
 
   if (command === "list") {
     const rows = [];

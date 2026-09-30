@@ -17,6 +17,8 @@ Highlights:
 - direct Playwright CLI attachment through loopback CDP;
 - safe profile discovery, startup, creation, and cloning;
 - Linux systemd-user automation and documented macOS setup;
+- `init` for a new machine's registry, and one optional registered extension
+  loaded into selected profiles (all other extensions stay disabled there);
 - no cookies, credentials, browser profiles, or machine paths in Git.
 
 ## Requirements
