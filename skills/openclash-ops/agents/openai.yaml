@@ -1,0 +1,4 @@
+interface:
+  display_name: "OpenClash Ops"
+  short_description: "Diagnose and safely operate transparent proxy routing"
+  default_prompt: "Use $openclash-ops to diagnose this network or OpenClash issue, preserve secrets, and require explicit authorization before changing proxy state."

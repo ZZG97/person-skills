@@ -1,8 +1,44 @@
 {
   "schema_version": 1,
   "name": "person-skills",
-  "skills": ["use-agent-chrome", "rss-ops"],
+  "skills": ["use-agent-chrome", "rss-ops", "openclash-ops"],
   "variables": {
+    "OPENCLASH_API_URL": {
+      "type": "string",
+      "description": "LAN or loopback URL of the managed OpenClash/Mihomo controller API",
+      "required": true,
+      "pattern": "^https?://[^/]+(:[0-9]+)?/?$"
+    },
+    "OPENCLASH_KEYCHAIN_SERVICE": {
+      "type": "string",
+      "description": "macOS Keychain service containing the OpenClash API secret",
+      "required": true,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "OPENCLASH_KEYCHAIN_ACCOUNT": {
+      "type": "string",
+      "description": "macOS Keychain account containing the OpenClash API secret",
+      "required": true,
+      "pattern": "^[^\\r\\n]+$"
+    },
+    "OPENCLASH_SSH_HOST": {
+      "type": "string",
+      "description": "Trusted-LAN hostname or address of the managed OpenClash router",
+      "required": true,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "OPENCLASH_SSH_USER": {
+      "type": "string",
+      "description": "SSH account used for explicitly authorized router configuration",
+      "required": true,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "OPENCLASH_SSH_KEY_PATH": {
+      "type": "path",
+      "description": "Machine-local path to the dedicated OpenClash SSH private key",
+      "required": true,
+      "must_exist": true
+    },
     "FRESHRSS_BASE_URL": {
       "type": "string",
       "description": "Loopback FreshRSS base URL used by rss-ops",
