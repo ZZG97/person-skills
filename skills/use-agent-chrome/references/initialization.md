@@ -42,14 +42,14 @@ Use one registry per Agent instance so profile discovery cannot accidentally
 cross account boundaries. For example on macOS:
 
 ~~~bash
+skill_root=/absolute/agent-home/.agents/skills/use-agent-chrome
 export AGENT_CHROME_CONFIG="$HOME/Library/Application Support/agent-chrome/registries/my-agent.json"
-mkdir -p "$(dirname "$AGENT_CHROME_CONFIG")"
-printf '{"version":1,"browsers":{}}\n' > "$AGENT_CHROME_CONFIG"
-chmod 600 "$AGENT_CHROME_CONFIG"
+node "$skill_root/scripts/agent-chrome-profile.js" init
 ~~~
 
 On Linux, a suitable location is
-`$HOME/.config/agent-chrome/registries/<instance>.json`. Never put a registry,
+`$HOME/.config/agent-chrome/registries/<instance>.json`. `init` creates the
+registry with mode 0600 and refuses to overwrite an existing one. Never put a registry,
 profile, account identifier, cookie, password, or token in Git.
 
 For Sage Agent Host, set the registry path in that instance's environment and

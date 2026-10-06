@@ -35,7 +35,14 @@ Use these default registry locations:
 
 ## Registry schema
 
-Start from the repository's examples/registry.example.json. The schema is:
+Create an empty registry on a new machine, then add profiles with the helper
+(it refuses to overwrite an existing registry):
+
+~~~bash
+node /absolute/path/to/use-agent-chrome/scripts/agent-chrome-profile.js init
+~~~
+
+Or start from the repository's examples/registry.example.json. The schema is:
 
 ~~~json
 {
@@ -57,13 +64,21 @@ Start from the repository's examples/registry.example.json. The schema is:
         "role": "personal",
         "environment": "production"
       },
-      "clonedFrom": "another-profile"
+      "clonedFrom": "another-profile",
+      "extension": true
     }
+  },
+  "extension": {
+    "directory": "/absolute/path/to/unpacked-extension",
+    "id": "extension-id",
+    "popup": "chrome-extension://extension-id/popup.html"
   }
 }
 ~~~
 
-purpose, account, and clonedFrom are optional non-secret metadata. Keep
+purpose, account, clonedFrom, and the per-profile extension flag are optional
+non-secret metadata. Omit the top-level extension object when unused; see
+"Registered extension" in SKILL.md. Keep
 usernames, email addresses, passwords, cookies, and access tokens out of the
 registry. Restrict the registry to the current user.
 

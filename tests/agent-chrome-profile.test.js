@@ -161,3 +161,77 @@ test("add dry-run creates a portable plan without writing profile state", async 
   assert.equal(fs.existsSync(profile), false);
   assert.deepEqual(JSON.parse(fs.readFileSync(config, "utf8")).browsers, {});
 });
+
+test("init creates an empty private registry and refuses to overwrite it", (t) => {
+  const directory = temporaryDirectory(t);
+  const config = path.join(directory, "nested", "registry.json");
+  const first = run(["init", "--config", config]);
+  assert.equal(first.status, 0, first.stderr);
+  assert.deepEqual(JSON.parse(fs.readFileSync(config, "utf8")), { version: 1, browsers: {} });
+  assert.equal(fs.statSync(config).mode & 0o777, 0o600);
+  const second = run(["init", "--config", config]);
+  assert.notEqual(second.status, 0);
+  assert.match(second.stderr, /refusing to overwrite/);
+});
+
+function writeExtension(directory) {
+  const extension = path.join(directory, "extension");
+  fs.mkdirSync(extension);
+  fs.writeFileSync(path.join(extension, "manifest.json"), JSON.stringify({ manifest_version: 3, name: "test", version: "1" }));
+  return extension;
+}
+
+function registryWithExtension(directory, extension, browsers = {}) {
+  const filename = path.join(directory, "registry.json");
+  fs.writeFileSync(filename, JSON.stringify({
+    version: 1,
+    browsers,
+    extension: { directory: extension, id: "abc", popup: "chrome-extension://abc/popup.html" },
+  }) + "\n", { mode: 0o600 });
+  return filename;
+}
+
+async function addPlan(directory, config, extra = []) {
+  const port = await freePort();
+  return run([
+    "add", "--profile", "personal", "--port", String(port),
+    "--user-data-dir", path.join(directory, "new-profile"),
+    "--executable", process.execPath, "--dry-run", "--config", config, ...extra,
+  ]);
+}
+
+test("add loads only the registered extension, unless opted out", async (t) => {
+  const directory = temporaryDirectory(t);
+  const extension = writeExtension(directory);
+  const config = registryWithExtension(directory, extension);
+  const withExtension = await addPlan(directory, config);
+  assert.equal(withExtension.status, 0, withExtension.stderr);
+  const plan = JSON.parse(withExtension.stdout);
+  assert.equal(plan.registryEntry.extension, true);
+  assert.match(plan.serviceDefinition, new RegExp(`--load-extension=${extension}`));
+  assert.match(plan.serviceDefinition, new RegExp(`--disable-extensions-except=${extension}`));
+  const without = await addPlan(directory, config, ["--without-extension"]);
+  assert.equal(without.status, 0, without.stderr);
+  const bare = JSON.parse(without.stdout);
+  assert.equal(bare.registryEntry.extension, false);
+  assert.doesNotMatch(bare.serviceDefinition, /load-extension/);
+});
+
+test("add fails when the registered extension directory is missing", async (t) => {
+  const directory = temporaryDirectory(t);
+  const config = registryWithExtension(directory, path.join(directory, "gone"));
+  const result = await addPlan(directory, config);
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /registered extension is missing/);
+});
+
+test("extension-url prints the registered popup page", (t) => {
+  const directory = temporaryDirectory(t);
+  const config = registryWithExtension(directory, writeExtension(directory));
+  const result = run(["extension-url", "--config", config]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), "chrome-extension://abc/popup.html");
+  const none = run(["extension-url", "--config", writeRegistry(directory, {})]);
+  assert.notEqual(none.status, 0);
+  assert.match(none.stderr, /no extension popup/);
+});

@@ -15,7 +15,13 @@
       "account": {
         "site": "example.com",
         "role": "personal"
-      }
+      },
+      "extension": true
     }
+  },
+  "extension": {
+    "directory": "/absolute/path/to/unpacked-extension",
+    "id": "extension-id",
+    "popup": "chrome-extension://extension-id/popup.html"
   }
 }

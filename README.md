@@ -28,6 +28,8 @@ Highlights:
 - direct Playwright CLI attachment through loopback CDP;
 - safe profile discovery, startup, creation, and cloning;
 - Linux systemd-user and macOS LaunchAgent automation;
+- `init` for a new machine's registry, and one optional registered extension
+  loaded into selected profiles (all other extensions stay disabled there);
 - no cookies, credentials, browser profiles, or machine paths in Git.
 
 ### rss-ops
@@ -42,23 +44,66 @@ Machine paths, usernames, and instance database locations are rendered by
 Skill Kit from the ignored `skill-kit.local.json`; credentials and mutable
 state stay outside Git.
 
+### personal-ledger
+
+A local ledger of the things a person wants kept track of — errands, plans,
+appointments, things owed or awaited, decisions to make — maintained by the
+agent from conversation. Tell the agent; it records the matter and keeps it
+moving.
+
+Highlights:
+
+- one record per matter: status, dated facts with evidence, next actions with
+  owners, who is waited on, and a full event history;
+- follow-up that does not let things sink: the agent checks what it can, the
+  user is told whom to nudge and what to decide, and checks back off when
+  nothing changes;
+- a daily digest and a lint report that catches stale or contradictory records;
+- works with any agent that can run a shell command; scheduling is optional and
+  uses whatever the agent's environment provides;
+- Python 3.9+ standard library only; data stays in a local directory, never in Git.
+
 ## Requirements
+
+use-agent-chrome:
 
 - Node.js 18 or newer
 - Chrome or Chromium with CDP support
 - playwright-cli available on PATH
 - Linux or macOS for automatic profile creation and cloning
-- Python 3.10 or newer for `rss-ops`
-- Bash, curl, and jq for `openclash-ops`; dig and nc are recommended diagnostics
+
+rss-ops:
+
+- Python 3.10 or newer
 - a local FreshRSS installation; RSSHub and a Sage RSS AI database are needed
-  for their respective `rss-ops` workflows
+  for their respective workflows
+
+openclash-ops:
+
+- Bash, curl, and jq; dig and nc are recommended diagnostics
+
+personal-ledger:
+
+- Python 3.9 or newer
 
 ## Install
 
-Copy the Skill directory into your agent's Skill location:
+Copy the Skill directory into the shared user-level Skill location:
 
 ~~~bash
-cp -R skills/use-agent-chrome ~/.codex/skills/use-agent-chrome
+mkdir -p ~/.agents/skills
+cp -R skills/use-agent-chrome ~/.agents/skills/use-agent-chrome
+cp -R skills/personal-ledger ~/.agents/skills/personal-ledger
+~~~
+
+`rss-ops` and `openclash-ops` contain machine-local placeholders; install them
+with Skill Kit (`plan`/`apply --skills <name>`) instead of copying.
+
+Agents that read another directory can link to it; for example Claude Code
+reads `~/.claude/skills`:
+
+~~~bash
+ln -s ../.agents/skills ~/.claude/skills   # only if ~/.claude/skills does not exist yet
 ~~~
 
 For a repository managed with skill-kit, validate it with:
@@ -82,12 +127,20 @@ For OpenClash operations, follow the
 [OpenClash initialization guide](skills/openclash-ops/references/initialization.md).
 Do not expose the controller API to the public Internet.
 
+For personal-ledger, ask your agent to set it up; it follows
+[the setup guide](skills/personal-ledger/references/setup.md) (one `init`
+command, then optional scheduling).
+
 ## Safety
 
 Keep the registry, Chromium profiles, service definitions, screenshots, and
 login state outside this repository. Never expose CDP beyond loopback. A cloned
 profile contains the same sensitive browser state as its source at the moment
 of cloning.
+
+The personal ledger holds private notes about a person's life. Keep its data
+directory (default `~/.local/share/personal-ledger`) out of any repository and
+backup service the person has not chosen.
 
 ## Development
 
@@ -96,6 +149,8 @@ npm test
 npm run check
 python3 /path/to/quick_validate.py skills/use-agent-chrome
 python3 /path/to/quick_validate.py skills/rss-ops
+python3 /path/to/quick_validate.py skills/openclash-ops
+python3 /path/to/quick_validate.py skills/personal-ledger
 python3 /path/to/skill_repo.py validate .
 ~~~
 
