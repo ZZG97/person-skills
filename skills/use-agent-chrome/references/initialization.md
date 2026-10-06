@@ -42,7 +42,7 @@ Use one registry per Agent instance so profile discovery cannot accidentally
 cross account boundaries. For example on macOS:
 
 ~~~bash
-export AGENT_CHROME_CONFIG="$HOME/Library/Application Support/agent-chrome/registries/laozhang.json"
+export AGENT_CHROME_CONFIG="$HOME/Library/Application Support/agent-chrome/registries/my-agent.json"
 mkdir -p "$(dirname "$AGENT_CHROME_CONFIG")"
 printf '{"version":1,"browsers":{}}\n' > "$AGENT_CHROME_CONFIG"
 chmod 600 "$AGENT_CHROME_CONFIG"
@@ -56,7 +56,7 @@ For Sage Agent Host, set the registry path in that instance's environment and
 allow the Host to pass it to the ACP Agent:
 
 ~~~dotenv
-AGENT_CHROME_CONFIG='/absolute/path/to/registries/laozhang.json'
+AGENT_CHROME_CONFIG='/absolute/path/to/registries/my-agent.json'
 ACP_AGENT_ENV_ALLOWLIST='INITIAL_AGENT_MODE,AGENT_CHROME_CONFIG'
 ~~~
 
