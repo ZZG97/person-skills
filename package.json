@@ -4,8 +4,8 @@
   "private": true,
   "description": "Portable public Skills for AI coding agents",
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "check": "node --check skills/use-agent-chrome/scripts/agent-chrome-profile.js"
+    "test": "node --test tests/*.test.js && python3 -m unittest discover -s tests -p 'test_*.py'",
+    "check": "node --check skills/use-agent-chrome/scripts/agent-chrome-profile.js && python3 -m py_compile skills/personal-ledger/scripts/ledger.py"
   },
   "engines": {
     "node": ">=18"
