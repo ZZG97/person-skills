@@ -69,8 +69,8 @@ the current state.
 
 ## Boundaries
 
-- The ledger is private and local. Never commit it, upload it, or quote it to anyone but
-  the user.
+- The ledger is private. Keep it out of every repository, sync or backup service the user
+  has not chosen for it, and never quote it to anyone but the user.
 - Do not act for the user toward other people (no replies, nudges or purchases) unless
   the user asks for that specific action.
 - Never store passwords, tokens, card numbers or identity-document numbers; write

@@ -16,6 +16,10 @@ shim `~/.local/bin/pledger`. It is safe to rerun and never overwrites data.
 
 - Another data directory: `--data-dir <path>`. Switching an existing config needs
   `--force`; confirm with the user first.
+- To back the ledger up with a private repository the user already keeps (for example
+  the agent's own home directory), put the data directory inside it and ignore its
+  `views/` (rendered) and `state/` (write lock and job log); `items/` and `config/` are
+  the data. Never put it in a shared or public repository.
 - Another shim directory: `--shim-dir <dir>`. If the output says `shim_on_path=false`,
   ask the user to add it to PATH, or always call the shim by its full path.
 - Another config location: set `PLEDGER_CONFIG=<path>` before `init`; the shim then

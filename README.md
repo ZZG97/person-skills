@@ -61,7 +61,8 @@ Highlights:
 - a daily digest and a lint report that catches stale or contradictory records;
 - works with any agent that can run a shell command; scheduling is optional and
   uses whatever the agent's environment provides;
-- Python 3.9+ standard library only; data stays in a local directory, never in Git.
+- Python 3.9+ standard library only; data stays in a local directory and enters no
+  repository the person has not chosen.
 
 ## Requirements
 
