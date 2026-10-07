@@ -1,5 +1,11 @@
 # Writing to the ledger
 
+Every item update, including a check result or a correction, must include both
+`item_id` and a non-empty `title`. Reuse the existing title unless renaming it.
+
+First use `commands/update.md` to select the authoritative owner and search existing
+records. This guide is the ledger backend of that shared workflow.
+
 Write only through the program; never edit item JSON by hand:
 
 ```

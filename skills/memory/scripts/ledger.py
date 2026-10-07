@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Personal ledger: a local, agent-maintained record of the things a person is tracking.
+"""Memory's ledger engine: a local record of the matters a person is tracking.
 
 The program is deterministic. It owns the data files, validation, follow-up scheduling,
 rendered views and run bookkeeping. Agents decide what a conversation means and write
@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 CONFIG_ENV = "PLEDGER_CONFIG"
 DATA_ENV = "PLEDGER_DATA_DIR"
 SHIM_NAME = "pledger"
@@ -970,7 +970,7 @@ def followup_report_data(items: list[dict[str, Any]], now: datetime) -> dict[str
         brief = followup_brief(item, now)
         if mode != "none":
             covered += 1
-        elif idle >= FOLLOWUP_STALE_DAYS:
+        elif idle >= FOLLOWUP_STALE_DAYS and not followup and item["disposition"]["status"] in TODO_DISPOSITIONS:
             stale_unfollowed.append(brief)
         if mode == "decide":
             decide.append(brief)

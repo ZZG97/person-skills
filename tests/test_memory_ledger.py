@@ -1,4 +1,4 @@
-"""Tests for skills/personal-ledger/scripts/ledger.py (run: python3 -m unittest discover -s tests)."""
+"""Tests for memory's ledger engine (run: python3 -m unittest discover -s tests)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-LEDGER = Path(__file__).resolve().parents[1] / "skills" / "personal-ledger" / "scripts" / "ledger.py"
+LEDGER = Path(__file__).resolve().parents[1] / "skills" / "memory" / "scripts" / "ledger.py"
 
 
 class LedgerTest(unittest.TestCase):
@@ -128,6 +128,17 @@ class LedgerTest(unittest.TestCase):
         lint = self.run_ok("lint", "--now", "2026-10-06T10:00:00+08:00")
         self.assertEqual(lint["by_rule"].get("followup_overdue"), 1)
 
+    def test_explicitly_disabled_followup_is_not_revived_as_stale_work(self) -> None:
+        self.apply_ok(self.new_item(disposition={"status": "observe", "reason": "user paused it"},
+                                    followup={"mode": "none", "note": "Resume only when the user asks"}))
+        self.apply_ok(self.new_item(item_id="pl-backlog", followup={"mode": "none", "note": "Candidate only"}))
+        due = self.run_ok("followup-due", "--now", "2026-10-14T10:00:00+08:00")
+        self.assertEqual(due["due_total"], 0)
+        self.assertEqual(due["missing_followup_total"], 0)
+        report = self.run_ok("followup-report", "--now", "2026-10-14T10:00:00+08:00")
+        self.assertEqual(report["stale_unfollowed"], [])
+        self.assertEqual(report["metrics"]["observe"], 1)
+
     def test_gate_followup_and_digest_once_a_day(self) -> None:
         self.assertFalse(self.run_ok("gate", "followup")["proceed"])
         self.apply_ok(self.new_item(followup={"mode": "check", "how": "look", "done_when": "seen",
@@ -155,6 +166,25 @@ class LedgerTest(unittest.TestCase):
     def test_doctor_on_fresh_install(self) -> None:
         doctor = self.run_ok("doctor")
         self.assertTrue(doctor["ok"])
+
+    def test_upgrade_refreshes_shim_without_resetting_records(self) -> None:
+        self.apply_ok(self.new_item())
+        before = self.item("pl-test")
+        config_path = self.home / ".config" / "personal-ledger" / "config.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["skill_dir"] = "/retired/personal-ledger"
+        config_path.write_text(json.dumps(config), encoding="utf-8")
+        shim_dir = self.home / "bin"
+        result = self.run_ok("init", "--shim-dir", str(shim_dir))
+        self.assertEqual(Path(result["data_dir"]), self.data.resolve())
+        self.assertEqual(self.item("pl-test"), before)
+        refreshed = json.loads(config_path.read_text(encoding="utf-8"))
+        self.assertEqual(refreshed["skill_dir"], str(LEDGER.parent.parent))
+        shim = shim_dir / "pledger"
+        self.assertIn(str(LEDGER), shim.read_text(encoding="utf-8"))
+        proc = subprocess.run([str(shim), "status"], env=self.env, capture_output=True, text=True)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(json.loads(proc.stdout)["items"], {"active": 1})
 
     def test_invalid_item_id_is_rejected(self) -> None:
         proc = self.apply(self.new_item(item_id="../escape"))

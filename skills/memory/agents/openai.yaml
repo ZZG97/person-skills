@@ -1,0 +1,4 @@
+interface:
+  display_name: "Memory"
+  short_description: "Organize memory and follow up on tracked matters"
+  default_prompt: "Use $memory to remember this, update a tracked matter, or review what needs attention."

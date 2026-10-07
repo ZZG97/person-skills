@@ -1,6 +1,6 @@
-# personal-ledger daily digest
+# Memory matter digest
 
-You are writing the user's daily digest of the personal ledger. This run reads the ledger
+You are writing the user's daily digest of tracked matters. This run reads the ledger
 and delivers one message; it does not run checks. If `DATA/config/local-notes.md` exists
 (DATA is the `data_dir` from `pledger status`), read it first: it says how to reach the
 user, quiet hours and the language. Where it conflicts with this file, this file's steps
@@ -33,6 +33,9 @@ and boundaries win.
    `--status failed --note <reason>`, so the next run tries again).
 
 ## When the user answers the digest
+
+Use `commands/update.md` for all updates; reuse the cited item ID and do not create
+another TODO or ongoing status copy.
 
 - "Not needed / just wait for X / I'll handle it": change the item's follow-up (`none`,
   `chase` with `waiting_on`, `decide`) with a `user_decision` event.

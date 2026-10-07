@@ -44,15 +44,16 @@ Machine paths, usernames, and instance database locations are rendered by
 Skill Kit from the ignored `skill-kit.local.json`; credentials and mutable
 state stay outside Git.
 
-### personal-ledger
+### memory
 
-A local ledger of the things a person wants kept track of — errands, plans,
-appointments, things owed or awaited, decisions to make — maintained by the
-agent from conversation. Tell the agent; it records the matter and keeps it
-moving.
+A unified workflow for persistent context, journals and tracked matters. It assigns
+each fact one authoritative owner: matter state lives in a local ledger, background
+and knowledge live in reference documents, and journals record dated history.
 
 Highlights:
 
+- one writing entrypoint that searches existing owners before creating a record;
+- preferences, system facts, project context, knowledge, daily and weekly journals;
 - one record per matter: status, dated facts with evidence, next actions with
   owners, who is waited on, and a full event history;
 - follow-up that does not let things sink: the agent checks what it can, the
@@ -83,7 +84,7 @@ openclash-ops:
 
 - Bash, curl, and jq; dig and nc are recommended diagnostics
 
-personal-ledger:
+memory:
 
 - Python 3.9 or newer
 
@@ -94,7 +95,7 @@ Copy the Skill directory into the shared user-level Skill location:
 ~~~bash
 mkdir -p ~/.agents/skills
 cp -R skills/use-agent-chrome ~/.agents/skills/use-agent-chrome
-cp -R skills/personal-ledger ~/.agents/skills/personal-ledger
+cp -R skills/memory ~/.agents/skills/memory
 ~~~
 
 `rss-ops` and `openclash-ops` contain machine-local placeholders; install them
@@ -128,9 +129,13 @@ For OpenClash operations, follow the
 [OpenClash initialization guide](skills/openclash-ops/references/initialization.md).
 Do not expose the controller API to the public Internet.
 
-For personal-ledger, ask your agent to set it up; it follows
-[the setup guide](skills/personal-ledger/references/setup.md) (one `init`
-command, then optional scheduling).
+For memory, ask your agent to set it up using
+[the setup guide](skills/memory/references/setup.md). Choose an Agent Home and data
+directory, initialise the ledger, and configure scheduled work only if wanted.
+The existing `pledger` command, `PLEDGER_CONFIG`, `PLEDGER_DATA_DIR` and ledger data
+remain compatible with personal-ledger. When upgrading, migrate TODO/ongoing state
+and retire the old writing Skill after verifying the new installation. Skill Kit
+does not remove stale installations automatically.
 
 ## Safety
 
@@ -139,7 +144,7 @@ login state outside this repository. Never expose CDP beyond loopback. A cloned
 profile contains the same sensitive browser state as its source at the moment
 of cloning.
 
-The personal ledger holds private notes about a person's life. Keep its data
+Memory and its ledger hold private user and project notes. Keep their data
 directory (default `~/.local/share/personal-ledger`) out of any repository and
 backup service the person has not chosen.
 
@@ -151,7 +156,7 @@ npm run check
 python3 /path/to/quick_validate.py skills/use-agent-chrome
 python3 /path/to/quick_validate.py skills/rss-ops
 python3 /path/to/quick_validate.py skills/openclash-ops
-python3 /path/to/quick_validate.py skills/personal-ledger
+python3 /path/to/quick_validate.py skills/memory
 python3 /path/to/skill_repo.py validate .
 ~~~
 

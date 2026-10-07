@@ -1,6 +1,6 @@
-# personal-ledger follow-up run
+# Memory matter follow-up
 
-You are running the personal-ledger follow-up. Purpose: move open items forward instead
+You are running memory's matter follow-up. Purpose: move open items forward instead
 of waiting until someone mentions them. Read `references/follow-up.md` of this Skill
 first; `pledger` is described in `SKILL.md`. If `DATA/config/local-notes.md` exists (DATA
 is the `data_dir` from `pledger status`), read it: it says how to reach the user and
@@ -8,6 +8,11 @@ which channels you may read. Where it conflicts with this file, this file's step
 boundaries win.
 
 ## Steps
+
+Resolve item ownership through `commands/update.md`; update existing item IDs only.
+Keep reference-document facts separate from disposition and next actions.
+Respect explicit `followup.mode=none` and user-paused/conditional matters. Do not
+assign checks to them just because their last event is old.
 
 1. `pledger gate followup`. If `proceed` is false, stop here and say nothing. Otherwise
    keep the printed `run`.

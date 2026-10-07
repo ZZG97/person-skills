@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "name": "person-skills",
-  "skills": ["use-agent-chrome", "rss-ops", "openclash-ops", "personal-ledger"],
+  "skills": ["use-agent-chrome", "rss-ops", "openclash-ops", "memory"],
   "variables": {
     "OPENCLASH_API_URL": {
       "type": "string",

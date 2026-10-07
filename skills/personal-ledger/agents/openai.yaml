@@ -1,4 +1,0 @@
-interface:
-  display_name: "Personal Ledger"
-  short_description: "Keep track of personal matters, follow up and send a daily digest"
-  default_prompt: "Use $personal-ledger to record what I want kept track of, tell me what is still open, or run the follow-up and daily digest."
